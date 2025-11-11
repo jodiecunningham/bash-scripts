@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# until-jq: rerun CMD until its JSON stdout satisfies a jq predicate
+
+set -u
+interval=2; max=0
+while getopts "i:m:" o; do case "$o" in i) interval="$OPTARG";; m) max="$OPTARG";; esac; done
+shift $((OPTIND-1))
+filter="$1"; shift
+attempt=0
+while :; do
+  ((attempt++))
+  out="$("$@" 2>/dev/null)" || out=""
+  if jq -e "$filter" >/dev/null <<<"$out"; then
+    printf '%s\n' "$out"
+    exit 0
+  fi
+  [[ $max -gt 0 && $attempt -ge $max ]] && exit 1
+  sleep "$interval"
+done
